@@ -5,7 +5,7 @@ var crypto = require('crypto');
 // Seed Dependencies ----------------------------------------------------------
 var Class = require('../lib/Class').Class,
     is = require('../lib/is').is,
-    Network = require('../lib/Network').Network;
+    Net = require('../lib/Network').Network;
 
 
 // Implementation -------------------------------------------------------------
@@ -34,10 +34,11 @@ var User = Class(function() {
             return false;
         }
 
-        if (type === Network.Event.Login.Client) {
+        if (type === Net.Login.Client) {
 
-            if (this.onLogin(data, id) !== true) {
-                this.error(Network.Error.Login, id);
+            var error = this.onLogin(data, id);
+            if (error !== true) {
+                this.error(error, id);
                 this.close('Login Error');
             }
 
@@ -53,7 +54,7 @@ var User = Class(function() {
 
         var valid = true;
         if (data.length !== 5 && data.length !== 6) {
-            return Network.Error.Login.Format;
+            return Net.Error.Login.Format;
         }
 
         // TODO send requirements to client and set up the form accordingly
@@ -67,22 +68,22 @@ var User = Class(function() {
         // Verify client version
         if (clientVersion !== this.getServer().getVersion()) {
             this.log('Login Error: Client Version');
-            return Network.Error.Login.Version;
+            return Net.Error.Login.Version;
 
         // Verify username
         } else if(!/^[0-9a-z_$]{3,16}$/i.test(username)) {
             this.log('Login Error: Username');
-            return Network.Error.Login.Persona;
+            return Net.Error.Login.Persona;
 
         // Assertion
         } else if (!assertion.length && token.length !== 40) {
             this.log('Login Error: Assertion');
-            return Network.Error.Login.Persona;
+            return Net.Error.Login.Persona;
 
         // Game
         } else if (!gameIdentifier.length || gameVersion <= 0) {
             this.log('Login Error: Game');
-            return Network.Error.Login.Game;
+            return Net.Error.Login.Game;
 
         } else {
 
@@ -108,7 +109,7 @@ var User = Class(function() {
 
                 } else {
                     this.log('Login Error: Token');
-                    return Network.Error.Login.Token;
+                    return Net.Error.Login.Token;
                 }
 
             } else {
@@ -159,15 +160,16 @@ var User = Class(function() {
             this.getServer().addPersona(token, this.getName(), this.getEmail());
 
             // Confirm to client
-            this.send(Network.Event.Login.Server, [this.getName(), this.getEmail(), token], id);
-            this.send(Network.Event.Ping, 0);
+            this.send(Net.Login.Server, [this.getName(), this.getEmail(), token], id);
+            this.send(Net.Client.Ping, 0);
+            this.getServer().sendSessions(this);
 
-            this.log('Persona Login with', this.getEmail());
+            this.log('Persona Login with:', this.getEmail());
 
         } else {
             this.log('Login Error: Persona');
-            this.error(Network.Error.Persona, id);
-            this.close();
+            this.error(Net.Error.Persona, id);
+            this.close('Invalid Persona');
         }
 
     }

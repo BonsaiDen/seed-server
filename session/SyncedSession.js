@@ -2,7 +2,7 @@
 var Class = require('../lib/Class').Class,
     TypedList = require('../lib/TypedList').TypedList,
     is = require('../lib/is').is,
-    Network = require('../lib/Network').Network,
+    Net = require('../lib/Network').Network,
     Player = require('./Player').Player;
 
 
@@ -57,8 +57,8 @@ var SyncedSession = Class(function(config) {
     init: function() {
         this._synced.running = true;
         this._synced.tick = 1;
-        this.broadcast(Network.Event.Session.Info, this.getSessionInfo());
-        this.broadcast(Network.Event.Tick.Limit, this.getTickLimit());
+        this.broadcast(Net.Game.Start, this.getSessionInfo());
+        this.broadcast(Net.Game.Tick.Limit, this.getTickLimit());
         this.log('Initialized');
     },
 
@@ -76,7 +76,7 @@ var SyncedSession = Class(function(config) {
         var maxTick = Math.min.apply(Math, ticks);
         if (maxTick > this._synced.tick) {
             this._synced.tick = maxTick;
-            this.broadcast(Network.Event.Tick.Limit, this.getTickLimit());
+            this.broadcast(Net.Game.Tick.Limit, this.getTickLimit());
         }
 
     },
@@ -87,7 +87,7 @@ var SyncedSession = Class(function(config) {
         is.assert(is.NotNull(action));
 
         this._players.each(function(to) {
-            to.send(Network.Event.Action.Server,
+            to.send(Net.Game.Action.Server,
                     this.getActionInfo(from, to, action));
 
         }, this);

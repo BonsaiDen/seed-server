@@ -1,7 +1,7 @@
 // Seed Dependencies ----------------------------------------------------------
 var Class = require('../lib/Class').Class,
     is = require('../lib/is').is,
-    Network = require('../lib/Network').Network;
+    Net = require('../lib/Network').Network;
 
 
 // Implementation -------------------------------------------------------------
@@ -26,7 +26,7 @@ var Syncable = Class(function() {
     // Methods ----------------------------------------------------------------
     onMessage: function(type, data) {
 
-        if (type === Network.Event.Pong) {
+        if (type === Net.Client.Pong) {
             this.onSync(data[0], data[1]);
             return true;
 
@@ -40,9 +40,9 @@ var Syncable = Class(function() {
 
         var sync = this._sync;
 
-        // Drop pongs which extremely high latency
+        // Drop pongs with extremely high latency
         if (diff > Syncable.PING_MAX) {
-            this.send(Network.Event.Ping, time);
+            this.send(Net.Client.Ping, time);
 
         } else {
 
@@ -52,7 +52,7 @@ var Syncable = Class(function() {
 
             // Gather the initial values
             if (!sync.sliding && sync.tick < Syncable.PING_COUNT - 1) {
-                this.send(Network.Event.Ping, time);
+                this.send(Net.Client.Ping, time);
 
             // When the window is full calculate the
             } else {
@@ -123,7 +123,7 @@ var Syncable = Class(function() {
 
         setTimeout(function() {
             if (that._isConnected) {
-                that.send(Network.Event.Ping, time + (Date.now() - offset));
+                that.send(Net.Client.Ping, time + (Date.now() - offset));
             }
 
         }, delay);

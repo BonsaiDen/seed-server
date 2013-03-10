@@ -19,18 +19,14 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   * THE SOFTWARE.
   */
-(function(exports) {
+var Server = require('./server/Server').Server;
 
-    var Server = require('./server/Server').Server;
+var srv = new Server({
+    session: {
+        tickRate: 100,
+        tickBuffer: 3
+    }
+});
 
-    var srv = new Server({
-        session: {
-            tickRate: 100,
-            tickBuffer: 3
-        }
-    });
-
-    srv.listen(4444, 'localhost', true);
-
-})(typeof exports !== 'undefined' ? exports : this);
+srv.listen(4444, 'localhost', true);
 

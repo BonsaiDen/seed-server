@@ -2,7 +2,7 @@
 var Class = require('../lib/Class').Class,
     is = require('../lib/is').is,
     Base = require('../lib/Base').Base,
-    Network = require('../lib/Network').Network,
+    Net = require('../lib/Network').Network,
     Syncable = require('./Syncable').Syncable,
     User = require('./User').User;
 
@@ -41,7 +41,7 @@ var Remote = Class(function(server, socket) {
     },
 
     error: function(type, id) {
-        this._socket.send([Network.Event.Error, type, id]);
+        this._socket.send([Net.Err, type, id]);
     },
 
     close: function(reason) {
@@ -118,9 +118,14 @@ var Remote = Class(function(server, socket) {
 
     },
 
-    onClose: function(reason) {
-        this.log('Closed:', reason);
-        this.close();
+    onClose: function(byRemote, reason) {
+        if (byRemote) {
+            this.log('Closed by Remote:', reason);
+
+        } else {
+            this.log('Closed by Server:', reason);
+        }
+        this.close(reason);
     },
 
 

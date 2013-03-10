@@ -4,7 +4,6 @@ var Class = require('../lib/Class').Class,
     is = require('../lib/is').is,
     lithium = require('../lib/lithium'),
     Base = require('../lib/Base').Base,
-    Network = require('../lib/Network').Network,
     Remote = require('../remote/Remote').Remote,
     SessionServer = require('./SessionServer').SessionServer,
     PersonaServer = require('./PersonaServer').PersonaServer;

@@ -3,7 +3,7 @@ var Class = require('../lib/Class').Class,
     TypedList = require('../lib/TypedList').TypedList,
     is = require('../lib/is').is,
     Base = require('../lib/Base').Base,
-    Network = require('../lib/Network').Network,
+    Net = require('../lib/Network').Network,
     Player = require('./Player').Player,
     SyncedSession = require('./SyncedSession').SyncedSession;
 
@@ -70,8 +70,8 @@ var Session = Class(function(server, config) {
         var player = new Player(this, remote, ++this._playerId);
         is.assert(this._players.add(player));
 
-        this.broadcast(Network.Event.Session.PlayerJoined, player.toNetwork());
-        this.broadcast(Network.Event.Session.Update, this.toNetwork());
+        this.broadcast(Net.Session.Player.Joined, player.toNetwork());
+        this.broadcast(Net.Session.Update, this.toNetwork());
         this._server.updateSessions();
 
         this.log('Player joined', player);
@@ -83,10 +83,17 @@ var Session = Class(function(server, config) {
     removePlayer: function(player) {
 
         is.assert(Class.is(player, Player));
-
         is.assert(this._players.remove(player));
-        this.broadcast(Network.Event.Session.PlayerLeft, player.toNetwork());
-        this.broadcast(Network.Event.Session.Update, this.toNetwork());
+
+        if (this.isRunning()) {
+            this.broadcast(Net.Game.Player.Left, player.toNetwork());
+
+        } else {
+            this.broadcast(Net.Session.Player.Left, player.toNetwork());
+        }
+
+        // TODO exclude running sessions from session list
+        this.broadcast(Net.Session.Update, this.toNetwork());
         this._server.updateSessions();
 
         this.log('Player left', player);

@@ -2,7 +2,7 @@
 var Class = require('../lib/Class').Class,
     is = require('../lib/is').is,
     Base = require('../lib/Base').Base,
-    Network = require('../lib/Network').Network;
+    Net = require('../lib/Network').Network;
 
 
 // Implementation -------------------------------------------------------------
@@ -22,7 +22,7 @@ var Player = Class(function(session, remote, id) {
 
     Base(this);
 
-    this.send(Network.Event.Player.Info, this.toNetwork(true));
+    this.send(Net.Game.Player.Info, this.toNetwork(true));
 
 }, Base, {
 
@@ -37,14 +37,14 @@ var Player = Class(function(session, remote, id) {
 
     onMessage: function(type, data) {
 
-        if (type === Network.Event.Tick.Confirm) {
+        if (type === Net.Game.Tick.Confirm) {
 
             if (is.Integer(data) && data > this._tick) {
                 this._tick = data;
                 this._session.onPlayerTick(this, data);
             }
 
-        } else if (type === Network.Event.Action.Client) {
+        } else if (type === Net.Game.Action.Client) {
             this._session.onPlayerAction(this, data);
 
         } else {
