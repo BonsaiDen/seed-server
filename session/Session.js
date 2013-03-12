@@ -11,10 +11,10 @@ var Class = require('../lib/Class').Class,
 // Implementation -------------------------------------------------------------
 var Session = Class(function(server, config) {
 
-    is.Signature(is.Class(), is.Object(null, {
-        tickRate: is.Integer(),
-        tickBuffer: is.Integer()
-    }));
+    is.assert(is.Class(server));
+    is.assert(is.Object(config));
+    is.assert(is.Integer(config.tickRate));
+    is.assert(is.Integer(config.tickBuffer));
 
     this._token = is.uniqueToken();
     this._server = server;
@@ -43,8 +43,14 @@ var Session = Class(function(server, config) {
 
     broadcast: function(type, data) {
         this._players.each(function(player) {
-            player.send(type, data);
-        });
+            if (is.Function(data)) {
+                player.send(type, data.call(this, player));
+
+            } else {
+                player.send(type, data);
+            }
+
+        }, this);
     },
 
     close: function() {

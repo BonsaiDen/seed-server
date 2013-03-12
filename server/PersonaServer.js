@@ -45,7 +45,9 @@ var PersonaServer = Class(function() {
     // Persona Session Handling -----------------------------------------------
     addPersona: function(token, username, email) {
 
-        is.Signature(is.String(), is.String(), is.String());
+        is.assert(is.String(token));
+        is.assert(is.String(username));
+        is.assert(is.String(email));
 
         this.log('Added Persona:', username, email);
         this._persona.map[token] = {
@@ -57,7 +59,9 @@ var PersonaServer = Class(function() {
 
     verifyPersona: function(assertion, callback, context) {
 
-        is.Signature(is.String(), is.Function(), is.Object());
+        is.assert(is.String(assertion));
+        is.assert(is.Function(callback));
+        is.assert(is.Object(context));
 
         var req = https.request({
             host: 'verifier.login.persona.org',

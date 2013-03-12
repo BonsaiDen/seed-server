@@ -10,7 +10,8 @@ var Class = require('../lib/Class').Class,
 // Implementation -------------------------------------------------------------
 var Remote = Class(function(server, socket) {
 
-    is.Signature(is.Class(), is.Object());
+    is.assert(is.Class(server));
+    is.assert(is.Object(socket));
 
     this._server = server;
     this._socket = socket;
@@ -49,6 +50,8 @@ var Remote = Class(function(server, socket) {
         if (this._isConnected) {
 
             this.log('Close:', reason);
+
+            Syncable.close(this);
 
             this._isConnected = false;
             this._server.removeRemote(this);

@@ -9,10 +9,9 @@ var Class = require('../lib/Class').Class,
 // Implementation -------------------------------------------------------------
 var SessionServer = Class(function(config) {
 
-    is.Signature(is.Object(null, {
-        tickRate: is.Integer(),
-        tickBuffer: is.Integer()
-    }));
+    is.assert(is.Object(config));
+    is.assert(is.Integer(config.tickRate));
+    is.assert(is.Integer(config.tickBuffer));
 
     this._session = {
         config: {

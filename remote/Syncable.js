@@ -13,7 +13,8 @@ var Syncable = Class(function() {
         clock: new Array(Syncable.PING_COUNT),
         tick: 0,
         ping: 0,
-        clockOffset: 0
+        clockOffset: 0,
+        timeout: null
     };
 
 }, {
@@ -24,6 +25,10 @@ var Syncable = Class(function() {
 
 
     // Methods ----------------------------------------------------------------
+    close: function() {
+        clearTimeout(this._sync.timeout);
+    },
+
     onMessage: function(type, data) {
 
         if (type === Net.Client.Pong) {
@@ -76,6 +81,8 @@ var Syncable = Class(function() {
                     this.log('Synced');
                 }
 
+                this.send(Net.Client.Sync, [sync.ping, sync.clockOffset]);
+
                 // Transition to the sliding window for continues updates
                 sync.sliding = true;
 
@@ -121,7 +128,7 @@ var Syncable = Class(function() {
         var that = this,
             offset = Date.now();
 
-        setTimeout(function() {
+        this._sync.timeout = setTimeout(function() {
             if (that._isConnected) {
                 that.send(Net.Client.Ping, time + (Date.now() - offset));
             }

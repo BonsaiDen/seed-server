@@ -9,10 +9,9 @@ var Class = require('../lib/Class').Class,
 // Implementation -------------------------------------------------------------
 var SyncedSession = Class(function(config) {
 
-    is.Signature(is.Object(null, {
-        rate: is.Integer(),
-        buffer: is.Integer()
-    }));
+    is.assert(is.Object(config));
+    is.assert(is.Integer(config.rate));
+    is.assert(is.Integer(config.buffer));
 
     this._synced = {
         running: false,
@@ -57,8 +56,9 @@ var SyncedSession = Class(function(config) {
     init: function() {
         this._synced.running = true;
         this._synced.tick = 1;
-        this.broadcast(Net.Game.Start, this.getSessionInfo());
-        this.broadcast(Net.Game.Tick.Limit, this.getTickLimit());
+        this.broadcast(Net.Game.Start, function(player) {
+            return this.getSessionInfo(player);
+        });
         this.log('Initialized');
     },
 
@@ -112,14 +112,16 @@ var SyncedSession = Class(function(config) {
         return this._synced.tick;
     },
 
-    getSessionInfo: function() {
+    getSessionInfo: function(player) {
         return {
+            pid: player.getSessionId(),
             buffer: this._synced.buffer,
             rate: this._synced.rate,
             seed: this._synced.seed,
             players: this._players.map(function(player) {
                 return player.toNetwork(false);
-            })
+            }),
+            tick: this._synced.tick
         };
     },
 

@@ -8,7 +8,9 @@ var Class = require('../lib/Class').Class,
 // Implementation -------------------------------------------------------------
 var Player = Class(function(session, remote, id) {
 
-    is.Signature(is.Class(), is.Class(), is.Integer());
+    is.assert(is.Class(session));
+    is.assert(is.Class(remote));
+    is.assert(is.Integer(id));
 
     this._token = is.uniqueToken();
     this._tick = 0;

@@ -12,9 +12,8 @@ var Class = require('../lib/Class').Class,
 // Implementation -------------------------------------------------------------
 var Server = Class(function(config) {
 
-    is.Signature(is.Object(null, {
-        session: is.Object()
-    }));
+    is.assert(is.Object(config));
+    is.assert(is.Object(config.session));
 
     this._isRunning = false;
     this._port = null;
