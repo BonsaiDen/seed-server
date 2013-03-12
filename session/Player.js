@@ -41,13 +41,17 @@ var Player = Class(function(session, remote, id) {
 
         if (type === Net.Game.Tick.Confirm) {
 
+            // TODO handle error / reject this in else
             if (is.Integer(data) && data > this._tick) {
                 this._tick = data;
                 this._session.onPlayerTick(this, data);
             }
 
         } else if (type === Net.Game.Action.Client) {
-            this._session.onPlayerAction(this, data);
+            // TODO handle error / reject this in else
+            if (is.NotNull(data)) {
+                this._session.onPlayerAction(this, data);
+            }
 
         } else {
             return false;

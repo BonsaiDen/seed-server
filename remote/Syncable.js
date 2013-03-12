@@ -53,7 +53,7 @@ var Syncable = Class(function() {
 
             // Keep a sliding window of the roundtrips and clocks
             sync.rt[sync.tick] = diff;
-            sync.clock[sync.tick] = [time, Date.now()];
+            sync.clock[sync.tick] = [time, this._toSyncTime(Date.now())];
 
             // Gather the initial values
             if (!sync.sliding && sync.tick < Syncable.PING_COUNT - 1) {
@@ -123,6 +123,10 @@ var Syncable = Class(function() {
 
 
     // Internals --------------------------------------------------------------
+    _toSyncTime: function(now) {
+        return now - (now / Net.SyncRange | 0) * Net.SyncRange;
+    },
+
     _syncPing: function(time, delay) {
 
         var that = this,
@@ -130,7 +134,9 @@ var Syncable = Class(function() {
 
         this._sync.timeout = setTimeout(function() {
             if (that._isConnected) {
-                that.send(Net.Client.Ping, time + (Date.now() - offset));
+                // Correct for the timeout delay
+                var value = time + that._toSyncTime(Date.now() - offset);
+                that.send(Net.Client.Ping, value);
             }
 
         }, delay);
