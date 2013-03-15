@@ -21,6 +21,7 @@
   */
 var Server = require('./server/Server').Server,
     PersonaAuth = require('./auth/Persona').Auth,
+    is = require('./lib/is').is,
     util = require('util');
 
 var srv = new Server({
@@ -33,7 +34,7 @@ var srv = new Server({
     auth: {
         Manager: PersonaAuth,
         config: {
-            host: 'localhost'
+            audience: 'localhost'
         }
     }
 
@@ -42,7 +43,7 @@ var srv = new Server({
 srv.listen(4444, 'localhost', true);
 
 process.on('SIGINT', function() {
-    console.log('RECEIVED SIGINT');
+    is.error('============= RECEIVED SIGINT =============');
     srv.shutdown();
     process.exit();
 });
