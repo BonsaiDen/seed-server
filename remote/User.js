@@ -11,8 +11,8 @@ var User = Class(function() {
         clientVersion: null,
         gameVersion: null,
         gameIdentifier: null,
-        username: '',
-        email: '',
+        username: null,
+        identifier: null,
         login: false
     };
 
@@ -34,7 +34,7 @@ var User = Class(function() {
 
             var error = this.onLogin(data, id);
             if (error !== true) {
-                this.error(error, id);
+                this.sendError(error, id);
                 this.close('Login Error');
             }
 
@@ -63,29 +63,29 @@ var User = Class(function() {
 
         // Verify client version
         if (clientVersion !== this.getServer().getVersion()) {
-            this.log('Login Error: Client Version');
+            this.sendError('Login Error: Client Version');
             return Net.Login.Error.ClientVersion;
 
         // Game
         } else if (!gameIdentifier.length || gameVersion <= 0) {
-            this.log('Login Error: Game');
+            this.sendError('Login Error: Game');
             return Net.Login.Error.InvalidGame;
 
         // Verify username
         } else if(!/^[0-9a-z_$]{3,16}$/i.test(username)) {
-            this.log('Login Error: Username');
+            this.sendError('Login Error: Username');
             return Net.Login.Error.InvalidUsername;
 
 
         // Verify Authentication
         } else if (!auth.length && token.length !== 40) {
-            this.log('Login Error: Invalid Authentication');
+            this.sendError('Login Error: Invalid Authentication');
             return Net.Login.Error.InvalidAuth;
 
         // Authenticate via the server's auth manager
         } else {
 
-            this.log('Login ', clientVersion, '/', gameIdentifier, '@', gameVersion);
+            this.info('Login ', clientVersion, '/', gameIdentifier, '@', gameVersion);
 
             this._user.gameVersion = gameVersion;
             this._user.gameIdentifier = gameIdentifier;
@@ -94,7 +94,7 @@ var User = Class(function() {
 
                 var login = this.getServer().authenticateViaToken(token, username);
                 if (login) {
-                    this._handleLogin(login, id);
+                    this._handleLogin(login, id, null);
                     return true;
 
                 } else {
@@ -102,8 +102,8 @@ var User = Class(function() {
                 }
 
             } else {
-                this.getServer().authenticate(auth, username, function(login) {
-                    this._handleLogin(login, id);
+                this.getServer().authenticate(auth, username, function(login, inUse) {
+                    this._handleLogin(login, id, inUse);
 
                 }, this);
 
@@ -120,8 +120,8 @@ var User = Class(function() {
         return this._user.username;
     },
 
-    getEmail: function() {
-        return this._user.email;
+    getIdentifier: function() {
+        return this._user.identifier;
     },
 
 
@@ -132,19 +132,24 @@ var User = Class(function() {
 
 
     // Internals --------------------------------------------------------------
-    _handleLogin: function(login, id) {
+    _handleLogin: function(login, id, inUse) {
 
-        if (login) {
+        if (inUse) {
+            this.error('Login Error: Account "%s" already in use', login.identifier);
+            this.sendError(Net.Login.Error.AccountInUse, id);
+            this.close('Account in use');
+
+        } else if (login) {
 
             // Set up user data
             this._user.login = true;
-            this._user.email = login.email;
+            this._user.identifier = login.identifier;
             this._user.username = login.username;
 
             // Confirm to client
             this.send(Net.Login.Response, [
                 this.getName(),
-                this.getEmail(),
+                this.getIdentifier(),
                 login.token
 
             ], id);
@@ -152,12 +157,12 @@ var User = Class(function() {
             this.send(Net.Client.Ping, 0);
             this.getServer().sendSessionList(this);
 
-            this.log('Login:', this.getName(), ' - ', this.getEmail());
+            this.ok('Login:', this.getName(), ' - ', this.getIdentifier());
 
         } else {
-            this.log('Login Error: Invalid Authentication');
-            this.error(Net.Login.Error.InvalidAuth, id);
-            this.close('Invalid Persona');
+            this.error('Login Error: Invalid Authentication');
+            this.sendError(Net.Login.Error.InvalidAuth, id);
+            this.close('Invalid Login');
         }
 
     }

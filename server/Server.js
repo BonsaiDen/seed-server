@@ -37,7 +37,7 @@ var Server = Class(function(config) {
 
         if (!this.isRunning()) {
 
-            this.log('Starting...');
+            this.log('Starting on %s:%s...', host, port);
 
             // Internals
             this._port = port;
@@ -77,6 +77,7 @@ var Server = Class(function(config) {
             this._remotes.each(function(remote) {
                 remote.shutdown();
             });
+
             is.assert(this._remotes.length === 0);
 
             this._port = null;
@@ -99,12 +100,23 @@ var Server = Class(function(config) {
 
 
     // Authentication Wrapper -------------------------------------------------
-    authenticate: function() {
-        return this._authManager.authenticate.apply(this._authManager, arguments);
+    authenticate: function(auth, username, callback, context) {
+
+        this._authManager.authenticate(auth, username, function(login) {
+
+            if (login && this.getUserByIdentifier(login.identifier)) {
+                callback.call(context, login, true);
+
+            } else {
+                callback.call(context, login, false);
+            }
+
+        }, this);
+
     },
 
     authenticateViaToken: function() {
-        return this._authManager.authenticateViaToken.apply(this._authManager, arguments);
+        this._authManager.authenticateViaToken.apply(this._authManager, arguments);
     },
 
 
@@ -112,10 +124,12 @@ var Server = Class(function(config) {
 
     // TODO make private again?
     addRemote: function(socket) {
+        this.info('Adding Remote for', socket);
         this._remotes.add(new Remote(this, socket));
     },
 
     removeRemote: function(remote) {
+        this.info('Removing Remote', remote);
         is.assert(Class.is(remote, Remote));
         is.assert(this._remotes.remove(remote));
     },
@@ -126,8 +140,18 @@ var Server = Class(function(config) {
         return 0.1;
     },
 
+    getPort: function() {
+        return this._port;
+    },
+
     getHost: function() {
         return this._host;
+    },
+
+    getUserByIdentifier: function(identifier) {
+        return this._remotes.single(function(remote) {
+            return remote.getIdentifier() === identifier;
+        });
     },
 
     isRunning: function() {

@@ -41,14 +41,14 @@ var Remote = Class(function(server, socket) {
 
     },
 
-    error: function(type, id) {
+    sendError: function(type, id) {
         this._socket.send([Net.Error, type, id]);
     },
 
     shutdown: function() {
         if (this._isConnected) {
             this._socket.send([Net.Server.Shutdown, 0]);
-            this.close();
+            this.close('Server Shutdown');
         }
     },
 
@@ -66,10 +66,13 @@ var Remote = Class(function(server, socket) {
             this._socket.unbind('close', this);
             this._socket.close();
 
-            // TODO really destroy player here?
-            this._player && this.setPlayer(null);
-            Base.destroy(this);
+            // We do NOT destroy the remote here, it might still be needed later on
+            if (this._player) {
+                this.setPlayer(null);
 
+            } else {
+                Base.destroy(this);
+            }
             return true;
 
         } else {
@@ -108,7 +111,7 @@ var Remote = Class(function(server, socket) {
 
             } else if (this._player) {
                 if (this._player.onMessage(type, data) === false) {
-                    this.log('Player message (un-handled):', type, data);
+                    this.warning('Player message (un-handled):', type, data);
                 }
             }
 
@@ -119,7 +122,7 @@ var Remote = Class(function(server, socket) {
                 return true;
 
             } else if (this._server.onRemoteAction(this, type, data, id) === false) {
-                this.log('Server message (un-handled):', type, data, id);
+                this.warning('Server message (un-handled):', type, data, id);
             }
 
         } else {
@@ -145,14 +148,21 @@ var Remote = Class(function(server, socket) {
     },
 
     setPlayer: function(player) {
+
         if (player === null) {
             is.assert(this._player);
             this._player = null;
+
+            // Player got destroyed and we are not connect, so clean up
+            if (!this._isConnected) {
+                Base.destroy(this);
+            }
 
         } else if (Class.is(player)) {
             is.assert(!this._player);
             this._player = player;
         }
+
     },
 
     getAddress: function() {

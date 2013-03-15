@@ -16,6 +16,7 @@ var SyncedSession = Class(function(config) {
     this._synced = {
         running: false,
         actionId: 0,
+        limit: 0,
         tick: 0,
         rate: config.rate,
         buffer: config.buffer,
@@ -34,7 +35,7 @@ var SyncedSession = Class(function(config) {
         });
 
         if (!this.isReady()) {
-            this.log('All players need to be ready');
+            this.warning('All players need to be ready');
             return false;
 
         } else if (!synced) {
@@ -47,19 +48,23 @@ var SyncedSession = Class(function(config) {
             return true;
 
         } else {
-            this.log('Already Running');
+            this.warning('Already Running');
             return false;
         }
 
     },
 
     init: function() {
+
         this._synced.running = true;
-        this._synced.tick = 1;
+        this._synced.limit = 1;
+        this._synced.tick = 0;
         this.broadcast(Net.Game.Start, function(player) {
             return this.getSessionInfo(player);
         });
+
         this.log('Initialized');
+
     },
 
 
@@ -69,12 +74,16 @@ var SyncedSession = Class(function(config) {
         is.assert(Class.is(player, Player));
         is.assert(is.Integer(tick));
 
+        // TODO check if tick is higher than player tick? or is this already done?
+
+        this.info('Tick %s', tick, player);
         var ticks = this._players.map(function(player) {
             return player.getTick();
         });
 
         var maxTick = Math.min.apply(Math, ticks);
         if (maxTick > this._synced.tick) {
+            this.info('Advancing tick');
             this._synced.tick = maxTick;
             this.broadcast(Net.Game.Tick.Limit, this.getTickLimit());
         }
@@ -85,6 +94,8 @@ var SyncedSession = Class(function(config) {
 
         is.assert(is.Class(from, Player));
         is.assert(is.NotNull(action));
+
+        this.info('Action from', from, action);
 
         this._players.each(function(to) {
             to.send(Net.Game.Action.Server,
@@ -114,14 +125,14 @@ var SyncedSession = Class(function(config) {
 
     getSessionInfo: function(player) {
         return {
-            pid: player.getSessionId(),
+            pid: player.getSessionId(), // TODO no longer required, remove
             buffer: this._synced.buffer,
             rate: this._synced.rate,
             seed: this._synced.seed,
-            players: this._players.map(function(player) {
-                return player.toNetwork(false);
+            players: this._players.map(function(p) {
+                return p.toNetwork(p === player);
             }),
-            tick: this._synced.tick
+            tick: this._synced.limit
         };
     },
 

@@ -33,24 +33,32 @@ var Player = Class(function(session, remote, id) {
         this._remote.send(type, data, id);
     },
 
-    error: function(type, id) {
-        this._remote.error(type, id);
+    sendError: function(type, id) {
+        this._remote.sendError(type, id);
     },
 
     onMessage: function(type, data) {
 
-        if (type === Net.Game.Tick.Confirm) {
+        if (!this._session) {
+            this.warning('Player not longer in session, ignoring message');
 
-            // TODO handle error / reject this in else
+        } else if (type === Net.Game.Tick.Confirm) {
+
             if (is.Integer(data) && data > this._tick) {
                 this._tick = data;
                 this._session.onPlayerTick(this, data);
+
+            } else {
+                this.warning('Invalid Tick Message');
             }
 
         } else if (type === Net.Game.Action.Client) {
-            // TODO handle error / reject this in else
+
             if (is.NotNull(data)) {
                 this._session.onPlayerAction(this, data);
+
+            } else {
+                this.warning('Invalid Action Message');
             }
 
         } else {
@@ -61,6 +69,7 @@ var Player = Class(function(session, remote, id) {
 
     destroy: function() {
         this._session.removePlayer(this);
+        this._session = null;
         this._remote.setPlayer(null);
         Base.destroy(this);
     },
@@ -87,7 +96,7 @@ var Player = Class(function(session, remote, id) {
 
     setReady: function(ready) {
         is.assert(is.Boolean(ready));
-        this.log('Ready:', ready);
+        this.info('Ready:', ready);
         this._isReady = ready;
     },
 

@@ -78,7 +78,7 @@ var Syncable = Class(function() {
                 sync.clockOffset = offset;
 
                 if (!sync.sliding) {
-                    this.log('Synced');
+                    this.info('Synced');
                 }
 
                 this.send(Net.Client.Sync, [sync.ping, sync.clockOffset]);

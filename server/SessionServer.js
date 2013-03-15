@@ -25,10 +25,13 @@ var SessionServer = Class(function(config) {
 
     // Methods ----------------------------------------------------------------
     shutdown: function() {
+
         this._session.list.each(function(session) {
             session.close();
         });
+
         is.assert(this._session.list.length === 0);
+
     },
 
     // TODO make private?
@@ -70,7 +73,7 @@ var SessionServer = Class(function(config) {
     },
 
     removeSession: function(session) {
-        this.log('Removed session', session);
+        this.info('Removing session', session);
         is.assert(Class.is(session, Session));
         is.assert(this._session.list.remove(session));
         this.sendSessionList();
@@ -85,14 +88,13 @@ var SessionServer = Class(function(config) {
 
             player = remote.getPlayer();
             session = player.getSession();
-            console.log(type, data, !!session, !!player);
             tokenSession = this.getSessionFromToken(data);
 
             // Actions on current session
             if (session) {
 
                 if (tokenSession !== session) {
-                    remote.error(Net.Session.Error.Invalid, id);
+                    remote.sendError(Net.Session.Error.Invalid, id);
 
                 } else if (type === Net.Session.Action.Ready) {
                     this.sessionReady(player, session, id);
@@ -117,7 +119,7 @@ var SessionServer = Class(function(config) {
                 }
 
             } else {
-                remote.error(Net.Session.Error.NotFound, id);
+                remote.sendError(Net.Session.Error.NotFound, id);
             }
 
         // New Sessions
@@ -126,7 +128,7 @@ var SessionServer = Class(function(config) {
 
         // Invalid State
         } else {
-            remote.error(Net.Session.Error.Invalid, id);
+            remote.sendError(Net.Session.Error.Invalid, id);
         }
 
     },
@@ -141,13 +143,13 @@ var SessionServer = Class(function(config) {
     sessionStart: function(player, session, id) {
 
         if (!session.isReady()) {
-            player.error(Net.Session.Error.NotReady, id);
+            player.sendError(Net.Session.Error.NotReady, id);
 
         } else if (session.isRunning()) {
-            player.error(Net.Session.Error.Running, id);
+            player.sendError(Net.Session.Error.Running, id);
 
         } else if (!session.isOwnedBy(player)) {
-            player.error(Net.Session.Error.NotOwner, id);
+            player.sendError(Net.Session.Error.NotOwner, id);
 
         } else {
             session.start();
@@ -159,7 +161,7 @@ var SessionServer = Class(function(config) {
     sessionJoin: function(remote, session, id) {
 
         if (session.isRunning()) {
-            remote.error(Net.Session.Error.Running, id);
+            remote.sendError(Net.Session.Error.Running, id);
 
         } else  {
             session.addPlayer(session.createPlayerForRemote(remote));
@@ -171,13 +173,13 @@ var SessionServer = Class(function(config) {
     sessionReady: function(player, session, id) {
 
         if (session.isOwnedBy(player)) {
-            player.error(Net.Session.Error.Invalid, id);
+            player.sendError(Net.Session.Error.Invalid, id);
 
         } else if (session.isRunning()) {
-            player.error(Net.Session.Error.Running, id);
+            player.sendError(Net.Session.Error.Running, id);
 
         } else if (player.isReady()) {
-            player.error(Net.Session.Error.IsReady, id);
+            player.sendError(Net.Session.Error.IsReady, id);
 
         } else {
             player.setReady(true);
@@ -189,13 +191,13 @@ var SessionServer = Class(function(config) {
     sessionNotReady: function(player, session, id) {
 
         if (session.isOwnedBy(player)) {
-            player.error(Net.Session.Error.Invalid, id);
+            player.sendError(Net.Session.Error.Invalid, id);
 
         } else if (session.isRunning()) {
-            player.error(Net.Session.Error.Running, id);
+            player.sendError(Net.Session.Error.Running, id);
 
         } else if (!player.isReady()) {
-            player.error(Net.Session.Error.NotReady, id);
+            player.sendError(Net.Session.Error.NotReady, id);
 
         } else {
             player.setReady(false);
@@ -206,15 +208,13 @@ var SessionServer = Class(function(config) {
 
     sessionLeave: function(player, session, id) {
 
-        // TODO move to session? session.closeBy(player) ?
         if (session.isOwnedBy(player) && !session.isRunning()) {
             player.send(Net.Session.Response.Closed, session.toNetwork(), id);
             session.close();
 
         } else {
-            // TODO remove from session instead? should that destroy the player?
-            player.getPlayer().destroy();
             player.send(Net.Session.Response.Left, session.toNetwork(), id);
+            session.removePlayer(player);
         }
 
     },
@@ -222,10 +222,10 @@ var SessionServer = Class(function(config) {
     sessionClose: function(player, session, id) {
 
         if (session.isRunning()) {
-            player.error(Net.Session.Error.Running, id);
+            player.sendError(Net.Session.Error.Running, id);
 
         } else if (!session.isOwnedBy(player)) {
-            player.error(Net.Session.Error.NotOwner, id);
+            player.sendError(Net.Session.Error.NotOwner, id);
 
         } else {
             player.send(Net.Session.Response.Closed, session.toNetwork(), id);
@@ -237,7 +237,6 @@ var SessionServer = Class(function(config) {
 
     // Getter / Setter --------------------------------------------------------
     getSessionFromToken: function(token) {
-        console.log(this._session.list, token);
         return this._session.list.single(function(session) {
             return session.getToken() === token;
         });

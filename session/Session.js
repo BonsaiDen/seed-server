@@ -22,6 +22,7 @@ var Session = Class(function(server, config, remote) {
     this._players = new TypedList(Player);
     this._playerId = 0;
 
+    this._isClosing = false;
     this._isStarted = false;
 
     Base(this);
@@ -57,9 +58,9 @@ var Session = Class(function(server, config, remote) {
 
     close: function() {
 
-        console.log(this._players);
+        this._isClosing = true;
         this._players.each(function(player) {
-            this.log('Destroying player');
+            this.info('Destroying player');
             player.destroy();
 
         }, this);
@@ -95,6 +96,8 @@ var Session = Class(function(server, config, remote) {
 
     removePlayer: function(player) {
 
+        this.info('Removing Player', player);
+
         is.assert(Class.is(player, Player));
         is.assert(this._players.remove(player));
 
@@ -111,10 +114,17 @@ var Session = Class(function(server, config, remote) {
 
         this.log('Player left', player);
 
-        // TODO close session when all players left
-        //if (this._players.length === 0) {
-            //this.close();
-        //}
+        // If session is emtpy close it on the next tick
+        if (this._players.length === 0 && !this._isClosing) {
+
+            this.info('Session is empty');
+
+            this._isClosing = true;
+            is.async(function() {
+                this.close();
+
+            }, this);
+        }
 
         return player;
 
@@ -129,7 +139,7 @@ var Session = Class(function(server, config, remote) {
     setOwner: function(owner) {
         is.assert(!this._ownerPlayer);
         is.assert(Class.is(owner, Player));
-        this.log('Owner set to', owner);
+        this.info('Owner set to', owner);
         owner.setReady(true);
         return (this._ownerPlayer = owner);
     },
@@ -160,7 +170,7 @@ var Session = Class(function(server, config, remote) {
     },
 
     toString: function() {
-        return 'Session';
+        return 'Session (' + this._players.length + ' players)';
     }
 
 });
