@@ -9,24 +9,26 @@ var Class = require('../lib/Class').Class,
 
 
 // Implementation -------------------------------------------------------------
-var Session = Class(function(server, config) {
+var Session = Class(function(server, config, remote) {
 
     is.assert(is.Class(server));
     is.assert(is.Object(config));
-    is.assert(is.Integer(config.tickRate));
-    is.assert(is.Integer(config.tickBuffer));
+    is.assert(is.Class(remote));
 
     this._token = is.uniqueToken();
     this._server = server;
 
-    this._owner = null;
+    this._ownerPlayer = null;
     this._players = new TypedList(Player);
     this._playerId = 0;
 
     this._isStarted = false;
 
     Base(this);
-    SyncedSession(this);
+    SyncedSession(this, config);
+
+    this.setOwner(this.createPlayerForRemote(remote));
+    this.addPlayer(this._ownerPlayer);
 
 }, Base, SyncedSession, {
 
@@ -55,9 +57,12 @@ var Session = Class(function(server, config) {
 
     close: function() {
 
+        console.log(this._players);
         this._players.each(function(player) {
+            this.log('Destroying player');
             player.destroy();
-        });
+
+        }, this);
 
         this._server.removeSession(this);
 
@@ -68,17 +73,19 @@ var Session = Class(function(server, config) {
 
 
     // Player Management ------------------------------------------------------
-    addPlayer: function(remote) {
+    createPlayerForRemote: function(remote) {
+        is.assert(Class.is(remote));
+        return new Player(this, remote, ++this._playerId);
+    },
 
-        // TODO create player in server level
-        is.assert(Class.is(remote)); // TODO move this somehwat out here
+    addPlayer: function(player) {
 
-        var player = new Player(this, remote, ++this._playerId);
+        is.assert(Class.is(player, Player));
         is.assert(this._players.add(player));
 
         this.broadcast(Net.Session.Player.Joined, player.toNetwork());
-        this.broadcast(Net.Session.Update, this.toNetwork());
-        this._server.updateSessions();
+        this.broadcast(Net.Session.Info.Update, this.toNetwork());
+        this._server.sendSessionList();
 
         this.log('Player joined', player);
 
@@ -100,7 +107,7 @@ var Session = Class(function(server, config) {
 
         // TODO exclude running sessions from session list
         this.broadcast(Net.Session.Update, this.toNetwork());
-        this._server.updateSessions();
+        this._server.sendSessionList();
 
         this.log('Player left', player);
 
@@ -120,20 +127,20 @@ var Session = Class(function(server, config) {
     },
 
     setOwner: function(owner) {
-        is.assert(!this._owner);
+        is.assert(!this._ownerPlayer);
         is.assert(Class.is(owner, Player));
         this.log('Owner set to', owner);
         owner.setReady(true);
-        return (this._owner = owner);
+        return (this._ownerPlayer = owner);
     },
 
     isOwnedBy: function(owner) {
         is.assert(Class.is(owner, Player));
-        return this._owner === owner;
+        return this._ownerPlayer === owner;
     },
 
     getOwner: function() {
-        return this._owner;
+        return this._ownerPlayer;
     },
 
     isRunning: function() {
@@ -147,7 +154,7 @@ var Session = Class(function(server, config) {
             token: this.getToken(),
             running: this.isRunning(),
             ready: this.isReady(),
-            owner: this._owner ? this._owner.toNetwork(false) : null,
+            owner: this._ownerPlayer ? this._ownerPlayer.toNetwork(false) : null,
             playerCount: this._players.length
         };
     },

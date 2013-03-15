@@ -5,8 +5,7 @@ var Class = require('../lib/Class').Class,
     lithium = require('../lib/lithium'),
     Base = require('../lib/Base').Base,
     Remote = require('../remote/Remote').Remote,
-    SessionServer = require('./SessionServer').SessionServer,
-    PersonaServer = require('./PersonaServer').PersonaServer;
+    SessionServer = require('./SessionServer').SessionServer;
 
 
 // Implementation -------------------------------------------------------------
@@ -14,18 +13,21 @@ var Server = Class(function(config) {
 
     is.assert(is.Object(config));
     is.assert(is.Object(config.session));
+    is.assert(is.Object(config.auth));
+    is.assert(is.Class(config.auth.Manager));
 
+    this._config = config;
     this._isRunning = false;
     this._port = null;
     this._host = null;
     this._interface = null;
     this._remotes = new TypedList(Remote);
+    this._authManager = null;
 
     Base(this);
-    PersonaServer(this);
     SessionServer(this, config.session);
 
-}, Base, PersonaServer, SessionServer, {
+}, Base, SessionServer, {
 
     // Methods ----------------------------------------------------------------
     listen: function(port, host) {
@@ -46,11 +48,10 @@ var Server = Class(function(config) {
             this._interface.on('connection', this.addRemote.bind(this));
             this._interface.listen(port, host);
 
-            // Sub
-            PersonaServer.start(this);
+            // Authentication
+            this._authManager = new this._config.auth.Manager(this._config.auth.config);
 
             this.log('Started');
-
             return true;
 
         } else {
@@ -59,19 +60,22 @@ var Server = Class(function(config) {
 
     },
 
-    stop: function() {
+    shutdown: function() {
 
         if (this.isRunning()) {
 
-            this.log('Stopping...');
+            this.log('Shutting down...');
 
-            // Sub
-            PersonaServer.stop(this);
-            SessionServer.stop(this);
+            // Sessions
+            SessionServer.shutdown(this);
+
+            // Authentication
+            this._authManager.destroy();
+            this._authManager = null;
 
             // Internals
             this._remotes.each(function(remote) {
-                remote.close();
+                remote.shutdown();
             });
             is.assert(this._remotes.length === 0);
 
@@ -91,6 +95,16 @@ var Server = Class(function(config) {
             return false;
         }
 
+    },
+
+
+    // Authentication Wrapper -------------------------------------------------
+    authenticate: function() {
+        return this._authManager.authenticate.apply(this._authManager, arguments);
+    },
+
+    authenticateViaToken: function() {
+        return this._authManager.authenticateViaToken.apply(this._authManager, arguments);
     },
 
 

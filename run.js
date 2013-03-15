@@ -19,14 +19,31 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   * THE SOFTWARE.
   */
-var Server = require('./server/Server').Server;
+var Server = require('./server/Server').Server,
+    PersonaAuth = require('./auth/Persona').Auth,
+    util = require('util');
 
 var srv = new Server({
+
     session: {
         tickRate: 100,
         tickBuffer: 3
+    },
+
+    auth: {
+        Manager: PersonaAuth,
+        config: {
+            host: 'localhost'
+        }
     }
+
 });
 
 srv.listen(4444, 'localhost', true);
+
+process.on('SIGINT', function() {
+    console.log('RECEIVED SIGINT');
+    srv.shutdown();
+    process.exit();
+});
 

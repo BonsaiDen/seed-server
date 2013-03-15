@@ -24,7 +24,7 @@ var Player = Class(function(session, remote, id) {
 
     Base(this);
 
-    this.send(Net.Game.Player.Info, this.toNetwork(true));
+    this.send(Net.Game.Player.Update, this.toNetwork(true));
 
 }, Base, {
 

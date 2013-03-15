@@ -42,7 +42,14 @@ var Remote = Class(function(server, socket) {
     },
 
     error: function(type, id) {
-        this._socket.send([Net.Err, type, id]);
+        this._socket.send([Net.Error, type, id]);
+    },
+
+    shutdown: function() {
+        if (this._isConnected) {
+            this._socket.send([Net.Server.Shutdown, 0]);
+            this.close();
+        }
     },
 
     close: function(reason) {
