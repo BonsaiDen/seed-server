@@ -49,7 +49,7 @@ var Server = Class(function(config) {
             this._interface.listen(port, host);
 
             // Authentication
-            this._authManager = new this._config.auth.Manager(this._config.auth.config);
+            this._authManager = new this._config.auth.Manager(this, this._config.auth.config);
 
             this.log('Started');
             return true;
@@ -101,22 +101,11 @@ var Server = Class(function(config) {
 
     // Authentication Wrapper -------------------------------------------------
     authenticate: function(auth, username, callback, context) {
-
-        this._authManager.authenticate(auth, username, function(login) {
-
-            if (login && this.getUserByIdentifier(login.identifier)) {
-                callback.call(context, login, true);
-
-            } else {
-                callback.call(context, login, false);
-            }
-
-        }, this);
-
+        this._authManager.authenticate.apply(this._authManager, arguments);
     },
 
     authenticateViaToken: function() {
-        this._authManager.authenticateViaToken.apply(this._authManager, arguments);
+        return this._authManager.authenticateViaToken.apply(this._authManager, arguments);
     },
 
 
@@ -150,7 +139,7 @@ var Server = Class(function(config) {
 
     getUserByIdentifier: function(identifier) {
         return this._remotes.single(function(remote) {
-            return remote.getIdentifier() === identifier;
+           return remote.getIdentifier() === identifier;
         });
     },
 

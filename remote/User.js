@@ -72,6 +72,8 @@ var User = Class(function() {
             return Net.Login.Error.InvalidGame;
 
         // Verify username
+        // TODO share this format with the client or make it configurable for
+        // the server / in the auth manager
         } else if(!/^[0-9a-z_$]{3,16}$/i.test(username)) {
             this.sendError('Login Error: Username');
             return Net.Login.Error.InvalidUsername;
@@ -90,25 +92,20 @@ var User = Class(function() {
             this._user.gameVersion = gameVersion;
             this._user.gameIdentifier = gameIdentifier;
 
-            if (token.length === 40) {
+            if (token.length) {
+                this.getServer().authenticateViaToken(token, username, function(login, inUse) {
+                    this._handleLogin(login, id, inUse);
 
-                var login = this.getServer().authenticateViaToken(token, username);
-                if (login) {
-                    this._handleLogin(login, id, null);
-                    return true;
-
-                } else {
-                    return Net.Login.Error.InvalidToken;
-                }
+                }, this);
 
             } else {
                 this.getServer().authenticate(auth, username, function(login, inUse) {
                     this._handleLogin(login, id, inUse);
 
                 }, this);
-
-                return true;
             }
+
+            return true;
 
         }
 
