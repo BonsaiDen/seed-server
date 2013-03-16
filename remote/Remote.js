@@ -31,7 +31,7 @@ var Remote = Class(function(server, socket) {
     // Methods ----------------------------------------------------------------
     send: function(type, data, id) {
 
-        is.assert(is.Integer(type));
+        is.assert(is.Integer(type) && Net.isValidType(type));
         if (is.Integer(id)) {
             this._socket.send([type, data, id]);
 
@@ -96,12 +96,14 @@ var Remote = Class(function(server, socket) {
             return false;
         }
 
-        // TODO validate network types here
-        if (!is.Integer(type)) {
+        if (!is.Integer(type) || !Net.isValidType(type)) {
+            this.warning('Invalid Network Type', +type);
             return false;
 
         // Messages
         } else if (msg.length === 2 && !!data) {
+
+            //this.info('Received %s:', Net.nameFromType(type), data);
 
             if (User.onMessage(this, type, data)) {
                 return true;
@@ -117,6 +119,8 @@ var Remote = Class(function(server, socket) {
 
         // Client Actions
         } else if (msg.length === 3 && !!data && is.Integer(id)) {
+
+            //this.info('Received %s:', Net.nameFromType(type), data, id);
 
             if (User.onAction(this, type, data, id)) {
                 return true;

@@ -1,168 +1,96 @@
 // Node Dependencies ----------------------------------------------------------
 var https = require('https'),
-    querystring = require('querystring'),
-    crypto = require('crypto');
+    querystring = require('querystring');
 
 // Seed Dependencies ----------------------------------------------------------
 var Class = require('../lib/Class').Class,
     is = require('../lib/is').is,
-    Base = require('../lib/Base').Base;
+    Auth = require('./Auth').Auth,
+    Net = require('../lib/Network').Network;
 
 
 // Implementation -------------------------------------------------------------
 var AuthPersona = Class(function(server, config) {
 
-    is.assert(is.Class(server));
+    Auth(this, server);
+
     is.assert(is.Object(config));
     is.assert(is.String(config.audience));
 
-    var that = this;
-
-    this._server = server;
     this._config = {
         provider: config.provider || 'verifier.login.persona.org',
         endpoint: config.endpoint || '/verify',
         audience: config.audience
     };
 
-    this._map = {};
-    this._interval = null;
-    this._interval = setInterval(function() {
-
-        for(var i in that._map) {
-            if (that._map.hasOwnProperty(i)) {
-                that._validatePersona(that._map[i]);
-            }
-        }
-
-    }, AuthPersona.INTERVAL);
-
-    Base(this);
-
-}, Base, {
-
-    $INTERVAL: 1000 * 60 * 30,
-    $TIMEOUT: 1000 * 60 * 60,
+}, Auth, {
 
     // Methods ----------------------------------------------------------------
-    authenticate: function(auth, username, callback, context) {
+    login: function(req, callback, context) {
 
-        is.assert(is.String(auth));
-        is.assert(is.String(username));
+        is.assert(is.String(req.username));
+        is.assert(is.String(req.assertion));
         is.assert(is.Function(callback));
         is.assert(is.Object(context));
 
-        if (auth.length && username.length) {
-            this.info('Authenticating "%s" via persona...', username);
-            this._verifyPersona(auth, username, callback, context);
+        var username = req.username,
+            assertion = req.assertion;
 
-        } else {
-            this.error('Invalid Assertion:', auth);
+        if (!this.isValidUsername(username)) {
+            this.error('Invalid Username "%s"', username);
             callback.call(context, null);
-        }
 
-    },
-
-    authenticateViaToken: function(token, username, callback, context) {
-
-        var inUse = null,
-            login = null;
-
-        if (is.String(token) && token.length === 40
-            && is.String(username) && username.length) {
-
-            var p = this._getPersonaForToken(token);
-
-            // Check if the identifier is already in use
-            if (p && this._server.getUserByIdentifier(p.identifier)) {
-                this.error('Account alreay in use:', p.identifier);
-                inUse = true;
-
-            // If it matches, remove the old token and issue a new one
-            } else if (p && p.username === username) {
-                this.ok('Valid Token for:', p.username, p.identifier);
-                this._removePersona(token);
-                login = this._addPersona(p.username, p.identifier, p.expires);
-
-            } else {
-                this.warning('Invalid Username or Token:', username, token);
-            }
+        } else if (!this.isValidAssertion(assertion)) {
+            this.error('Invalid Assertion:', assertion);
+            callback.call(context, null);
 
         } else {
-            this.error('Invalid Token:', token);
-        }
-
-        callback.call(context, login, inUse);
-
-    },
-
-    destroy: function() {
-
-        for(var i in this._map) {
-            if (this._map.hasOwnProperty(i)) {
-                delete this._map[i];
-            }
-        }
-
-        clearInterval(this._interval);
-        this._interval = null;
-
-        Base.destroy(this);
-
-    },
-
-
-    // Helpers ----------------------------------------------------------------
-    toString: function() {
-        return 'Persona Auth';
-    },
-
-
-    // Persona Management -----------------------------------------------------
-    _addPersona: function(username, identifier, expires) {
-
-        is.assert(is.String(username));
-        is.assert(is.String(identifier));
-        is.assert(is.Number(expires));
-
-        var token = crypto.createHash('sha1');
-        token.update(is.uniqueToken());
-        token.update(username);
-        token.update(identifier);
-        token.update('' + Date.now());
-        token = token.digest('hex');
-
-        this.info('Added Persona:', username, identifier);
-        this._map[token] = {
-            expires: expires,
-            username: username,
-            identifier: identifier,
-            token: token
-        };
-
-        return this._map[token];
-
-    },
-
-    _removePersona: function(token) {
-
-        is.assert(is.String(token));
-        if (this._map.hasOwnProperty(token)) {
-
-            var persona = this._map[token];
-            this.info('Remove Persona:', persona.username, persona.identifier);
-            delete this._map[token];
-
-            return true;
-
-        } else {
-            return false;
+            this.info('Authenticating "%s" via persona...', username);
+            this._verifyPersona(assertion, username, callback, context);
         }
 
     },
 
 
     // Getter / Setter --------------------------------------------------------
+    isValidRequest: function(req) {
+
+        if (req.length !== 6) {
+            return Net.Login.Error.RequestFormat;
+
+        } else {
+
+            // Handle additional paramater for persona assertion
+            var request = Auth.isValidRequest(this, req);
+            if (is.Object(request)) {
+
+                var assertion = is.String(req[5]) ? req[5].trim() : '';
+                if (!request.token && !this.isValidAssertion(assertion)) {
+                    return Net.Login.Error.InvalidData;
+
+                } else {
+                    request.assertion = assertion;
+                }
+
+            }
+
+            return request;
+
+        }
+
+    },
+
+    isValidAssertion: function(assertion) {
+        // TODO make more exact
+        return is.String(assertion) && assertion.length > 10;
+    },
+
+    getName: function() {
+        return 'persona';
+    },
+
+
+    // Persona Management -----------------------------------------------------
     _verifyPersona: function(assertion, username, callback, context) {
 
         var that = this,
@@ -226,11 +154,12 @@ var AuthPersona = Class(function(server, config) {
             response = null;
 
         } else if (this._server.getUserByIdentifier(response.identifier)) {
+            this.error('Account "%s" already in use.', username);
             inUse = true;
 
         } else {
             this.ok('Verification for "%s" successful', username);
-            login = this._addPersona(username, response.email, response.expires);
+            login = this.issueToken(username, response.email, response.expires);
         }
 
         return {
@@ -240,38 +169,10 @@ var AuthPersona = Class(function(server, config) {
 
     },
 
-    _getPersonaForToken: function(token) {
 
-        is.assert(is.String(token));
-        if (this._validatePersona(token)) {
-            return this._map[token];
-
-        } else {
-            return null;
-        }
-
-    },
-
-    _validatePersona: function(token) {
-
-        if (this._map.hasOwnProperty(token)) {
-
-            var persona = this._map[token],
-                passed = Date.now() - persona.time;
-
-            if (passed > AuthPersona.TIMEOUT || Date.now() > persona.expires) {
-                this.info('Persona expired:', persona.username, persona.email);
-                this._removePersona(token);
-                return false;
-
-            } else {
-                return true;
-            }
-
-        } else {
-            return false;
-        }
-
+    // Helpers ----------------------------------------------------------------
+    toString: function() {
+        return 'Persona Auth';
     }
 
 });

@@ -99,20 +99,9 @@ var Server = Class(function(config) {
     },
 
 
-    // Authentication Wrapper -------------------------------------------------
-    authenticate: function(auth, username, callback, context) {
-        this._authManager.authenticate.apply(this._authManager, arguments);
-    },
-
-    authenticateViaToken: function() {
-        return this._authManager.authenticateViaToken.apply(this._authManager, arguments);
-    },
-
-
     // Remotes ----------------------------------------------------------------
-
-    // TODO make private again?
     addRemote: function(socket) {
+        // TODO make private again?
         this.info('Adding Remote for', socket);
         this._remotes.add(new Remote(this, socket));
     },
@@ -141,6 +130,10 @@ var Server = Class(function(config) {
         return this._remotes.single(function(remote) {
            return remote.getIdentifier() === identifier;
         });
+    },
+
+    getAuhenticator: function() {
+        return this._authManager;
     },
 
     isRunning: function() {

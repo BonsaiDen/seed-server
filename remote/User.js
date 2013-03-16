@@ -8,12 +8,11 @@ var Class = require('../lib/Class').Class,
 var User = Class(function() {
 
     this._user = {
-        clientVersion: null,
-        gameVersion: null,
-        gameIdentifier: null,
+        client: null,
+        game: null,
         username: null,
         identifier: null,
-        login: false
+        isLoggedIn: false
     };
 
 }, {
@@ -21,22 +20,17 @@ var User = Class(function() {
 
     // Methods ----------------------------------------------------------------
     onMessage: function(type, data) {
-        return !this._user.login;
+        return !this._user.isLoggedIn;
     },
 
     onAction: function(type, data, id) {
 
-        if (this._user.login) {
+        if (this._user.isLoggedIn) {
             return false;
         }
 
         if (type === Net.Login.Request) {
-
-            var error = this.onLogin(data, id);
-            if (error !== true) {
-                this.sendError(error, id);
-                this.close('Login Error');
-            }
+            this.onLogin(data, id);
 
         } else {
             this.close('Invalid Login');
@@ -48,64 +42,24 @@ var User = Class(function() {
 
     onLogin: function(data, id) {
 
-        var valid = true;
-        if (data.length !== 5 && data.length !== 6) {
-            return Net.Login.Error.RequestFormat;
-        }
+        var auth = this.getServer().getAuhenticator(),
+            req = auth.isValidRequest(data);
 
-        // TODO send requirements to client and set up the form accordingly
-        var clientVersion = is.Number(data[0]) ? data[0] : -1,
-            gameIdentifier = is.String(data[1]) ? data[1].trim() : '',
-            gameVersion = is.Number(data[2]) ? data[2] : -1,
-            username = is.String(data[3]) ? data[3].trim() : '',
-            auth = is.String(data[4]) ? data[4].trim() : '',
-            token = is.String(data[5]) ? data[5].trim() : '';
+        if (!is.Object(req)) {
+            this.error('Login Error:', req);
+            this.sendError(req, id);
+            this.close('Login Error');
 
-        // Verify client version
-        if (clientVersion !== this.getServer().getVersion()) {
-            this.sendError('Login Error: Client Version');
-            return Net.Login.Error.ClientVersion;
-
-        // Game
-        } else if (!gameIdentifier.length || gameVersion <= 0) {
-            this.sendError('Login Error: Game');
-            return Net.Login.Error.InvalidGame;
-
-        // Verify username
-        // TODO share this format with the client or make it configurable for
-        // the server / in the auth manager
-        } else if(!/^[0-9a-z_$]{3,16}$/i.test(username)) {
-            this.sendError('Login Error: Username');
-            return Net.Login.Error.InvalidUsername;
-
-
-        // Verify Authentication
-        } else if (!auth.length && token.length !== 40) {
-            this.sendError('Login Error: Invalid Authentication');
-            return Net.Login.Error.InvalidAuth;
-
-        // Authenticate via the server's auth manager
         } else {
 
-            this.info('Login ', clientVersion, '/', gameIdentifier, '@', gameVersion);
+            // Store game and client information
+            this._user.game = req.game;
+            this._user.client = req.client;
 
-            this._user.gameVersion = gameVersion;
-            this._user.gameIdentifier = gameIdentifier;
+            auth.loginFromRequest(req, function(login, inUse) {
+                this._handleLogin(login, id, inUse);
 
-            if (token.length) {
-                this.getServer().authenticateViaToken(token, username, function(login, inUse) {
-                    this._handleLogin(login, id, inUse);
-
-                }, this);
-
-            } else {
-                this.getServer().authenticate(auth, username, function(login, inUse) {
-                    this._handleLogin(login, id, inUse);
-
-                }, this);
-            }
-
-            return true;
+            }, this);
 
         }
 
@@ -132,18 +86,15 @@ var User = Class(function() {
     _handleLogin: function(login, id, inUse) {
 
         if (inUse) {
-            this.error('Login Error: Account "%s" already in use', login.identifier);
             this.sendError(Net.Login.Error.AccountInUse, id);
             this.close('Account in use');
 
         } else if (login) {
 
-            // Set up user data
-            this._user.login = true;
-            this._user.identifier = login.identifier;
+            this._user.isLoggedIn = true;
             this._user.username = login.username;
+            this._user.identifier = login.identifier;
 
-            // Confirm to client
             this.send(Net.Login.Response, [
                 this.getName(),
                 this.getIdentifier(),
@@ -151,13 +102,14 @@ var User = Class(function() {
 
             ], id);
 
+            // Initiate client state
             this.send(Net.Client.Ping, 0);
             this.getServer().sendSessionList(this);
 
-            this.ok('Login:', this.getName(), ' - ', this.getIdentifier());
+            this.ok('Logged in as "%s" (%s)', this.getName(), this.getIdentifier());
 
         } else {
-            this.error('Login Error: Invalid Authentication');
+            this.error('Invalid Login');
             this.sendError(Net.Login.Error.InvalidAuth, id);
             this.close('Invalid Login');
         }

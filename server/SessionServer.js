@@ -182,7 +182,7 @@ var SessionServer = Class(function(config) {
             player.sendError(Net.Session.Error.IsReady, id);
 
         } else {
-            player.setReady(true);
+            session.setPlayerReady(player, true);
             player.send(Net.Session.Response.Ready, session.toNetwork(), id);
         }
 
@@ -200,7 +200,7 @@ var SessionServer = Class(function(config) {
             player.sendError(Net.Session.Error.NotReady, id);
 
         } else {
-            player.setReady(false);
+            session.setPlayerReady(player, false);
             player.send(Net.Session.Response.NotReady, session.toNetwork(), id);
         }
 

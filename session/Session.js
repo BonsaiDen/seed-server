@@ -108,11 +108,10 @@ var Session = Class(function(server, config, remote) {
             this.broadcast(Net.Session.Player.Left, player.toNetwork());
         }
 
-        // TODO exclude running sessions from session list
-        this.broadcast(Net.Session.Update, this.toNetwork());
+        this.broadcast(Net.Session.Info.Update, this.toNetwork());
         this._server.sendSessionList();
 
-        this.log('Player left', player);
+        this.info('Player left', player);
 
         // If session is emtpy close it on the next tick
         if (this._players.length === 0 && !this._isClosing) {
@@ -151,6 +150,20 @@ var Session = Class(function(server, config, remote) {
 
     getOwner: function() {
         return this._ownerPlayer;
+    },
+
+    setPlayerReady: function(player, mode) {
+
+        is.assert(this._players.has(player));
+        player.setReady(mode);
+
+        if (mode === true) {
+            this.broadcast(Net.Session.Player.Ready, player.toNetwork(false));
+
+        } else {
+            this.broadcast(Net.Session.Player.NotReady, player.toNetwork(false));
+        }
+
     },
 
     isRunning: function() {
