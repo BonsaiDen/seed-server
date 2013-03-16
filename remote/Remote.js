@@ -32,6 +32,9 @@ var Remote = Class(function(server, socket) {
     send: function(type, data, id) {
 
         is.assert(is.Integer(type) && Net.isValidType(type));
+
+        this.info('Send:', Net.nameFromType(type), data);
+
         if (is.Integer(id)) {
             this._socket.send([type, data, id]);
 

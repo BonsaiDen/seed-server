@@ -68,10 +68,14 @@ var Player = Class(function(session, remote, id) {
     },
 
     destroy: function() {
-        this._session.removePlayer(this);
-        this._session = null;
+
+        if (this._session) {
+            this._session.removePlayer(this);
+        }
+
         this._remote.setPlayer(null);
         Base.destroy(this);
+
     },
 
 
@@ -102,6 +106,11 @@ var Player = Class(function(session, remote, id) {
 
     getTick: function() {
         return this._tick;
+    },
+
+    setSession: function(session) {
+        is.assert(Class.is(session) || session === null);
+        this._session = session;
     },
 
     getSession: function() {

@@ -100,8 +100,11 @@ var Session = Class(function(server, config, remote) {
 
         is.assert(Class.is(player, Player));
         is.assert(this._players.remove(player));
+        player.setSession(null);
 
+        // Send updates to clients
         if (this.isRunning()) {
+            player.send(Net.Game.Leave, player.toNetwork());
             this.broadcast(Net.Game.Player.Left, player.toNetwork());
 
         } else {
@@ -119,13 +122,15 @@ var Session = Class(function(server, config, remote) {
             this.info('Session is empty');
 
             this._isClosing = true;
+            this._ownerPlayer = null;
+
             is.async(function() {
                 this.close();
 
             }, this);
         }
 
-        return player;
+        player.destroy();
 
     },
 
