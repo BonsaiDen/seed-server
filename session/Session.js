@@ -100,7 +100,6 @@ var Session = Class(function(server, config, remote) {
 
         is.assert(Class.is(player, Player));
         is.assert(this._players.remove(player));
-        player.setSession(null);
 
         // Send updates to clients
         if (this.isRunning()) {
@@ -171,8 +170,19 @@ var Session = Class(function(server, config, remote) {
 
     },
 
+    containsPlayer: function(player) {
+        is.assert(Class.is(player, Player));
+        return this._players.contains(Player);
+    },
+
     isRunning: function() {
         return this._isStarted;
+    },
+
+    isReady: function() {
+        return this._players.every(function(p) {
+            return p.isReady();
+        });
     },
 
 

@@ -19,8 +19,11 @@ var Player = Class(function(session, remote, id) {
     this._session = session;
     this._isReady = false;
 
+    this._name = remote.getName();
+    this._address = remote.getAddress();
+
     this._remote = remote;
-    this._remote.setPlayer(this);
+    this._remote.attachPlayer(this);
 
     Base(this);
 
@@ -30,50 +33,37 @@ var Player = Class(function(session, remote, id) {
 
     // Methods ----------------------------------------------------------------
     send: function(type, data, id) {
-        this._remote.send(type, data, id);
+        if (this._remote) {
+            this._remote.send(type, data, id);
+
+        } else {
+            this.warning('Player not longer connected, ingoring send().');
+        }
     },
 
     sendError: function(type, id) {
-        this._remote.sendError(type, id);
+        if (this._remote) {
+            this._remote.sendError(type, id);
+
+        } else {
+            this.warning('Player not longer connected, ingoring sendError().');
+        }
     },
 
     onMessage: function(type, data) {
-
         if (!this._session) {
             this.warning('Player not longer in session, ignoring message');
 
-        } else if (type === Net.Game.Tick.Confirm) {
-
-            if (is.Integer(data) && data > this._tick) {
-                this._tick = data;
-                this._session.onPlayerTick(this, data);
-
-            } else {
-                this.warning('Invalid Tick Message');
-            }
-
-        } else if (type === Net.Game.Action.Client) {
-
-            if (is.NotNull(data)) {
-                this._session.onPlayerAction(this, data);
-
-            } else {
-                this.warning('Invalid Action Message');
-            }
-
         } else {
-            return false;
+            return this._session.onPlayerMessage(this, type, data);
         }
-
     },
 
     destroy: function() {
 
-        if (this._session) {
-            this._session.removePlayer(this);
-        }
-
-        this._remote.setPlayer(null);
+        is.assert(!this._session.containsPlayer(this));
+        this._session = null;
+        this._remote.detachPlayer(this);
         Base.destroy(this);
 
     },
@@ -85,13 +75,12 @@ var Player = Class(function(session, remote, id) {
     },
 
     getAddress: function() {
-        return this._remote.getAddress();
+        return this._address;
     },
 
     getName: function() {
-        return this._remote.getName();
+        return this._name;
     },
-
 
     // Session
     isReady: function() {
@@ -104,12 +93,17 @@ var Player = Class(function(session, remote, id) {
         this._isReady = ready;
     },
 
+    setTick: function(tick) {
+        is.assert(is.Integer(tick));
+        this._tick = tick;
+    },
+
     getTick: function() {
         return this._tick;
     },
 
     setSession: function(session) {
-        is.assert(Class.is(session) || session === null);
+        is.assert(Class.is(session));
         this._session = session;
     },
 
@@ -171,7 +165,7 @@ var Player = Class(function(session, remote, id) {
     },
 
     toString: function() {
-        return 'Player #' + this.getId() + ' @ ' + this._remote.getAddress();
+        return 'Player #' + this.getId() + ' @ ' + this._address;
     }
 
 });

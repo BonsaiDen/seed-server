@@ -18,35 +18,24 @@ var SessionServer = Class(function(config) {
             rate: config.tickRate,
             buffer: config.tickBuffer
         },
-        list: new TypedList(Session)
+        list: null
     };
 
 }, {
 
     // Methods ----------------------------------------------------------------
+    init: function() {
+        this._session.list = new TypedList(Session);
+    },
+
     shutdown: function() {
 
         this._session.list.each(function(session) {
             session.close();
         });
 
-        is.assert(this._session.list.length === 0);
-
-    },
-
-    // TODO make private?
-    addSession: function(owner) {
-
-        is.assert(Class.is(owner));
-
-        var session = new Session(this, this._session.config, owner);
-        is.assert(this._session.list.add(session));
-
-        this.sendSessionList();
-
-        this.log('Added session', session);
-
-        return session;
+        this._session.list.destroy();
+        this._session.list = null;
 
     },
 
@@ -108,6 +97,12 @@ var SessionServer = Class(function(config) {
                 } else if (type === Net.Session.Action.Leave) {
                     this.sessionLeave(player, session, id);
 
+                } else if (type === Net.Session.Action.Pause) {
+                    this.sessionPause(player, session, id);
+
+                } else if (type === Net.Session.Action.Resume) {
+                    this.sessionResume(player, session, id);
+
                 } else if (type === Net.Session.Action.Close) {
                     this.sessionClose(player, session, id);
                 }
@@ -136,8 +131,19 @@ var SessionServer = Class(function(config) {
 
     // Session Management -----------------------------------------------------
     sessionCreate: function(remote, data, id) {
-        var session = this.addSession(remote);
+
+        // TODO handle client side custom data
+        is.assert(Class.is(remote));
+
+        var session = new Session(this, this._session.config, remote);
+        is.assert(this._session.list.add(session));
+
+        this.sendSessionList();
+
+        this.log('Added session', session);
+
         remote.send(Net.Session.Response.Joined, session.toNetwork(), id);
+
     },
 
     sessionStart: function(player, session, id) {
@@ -215,6 +221,42 @@ var SessionServer = Class(function(config) {
         } else {
             player.send(Net.Session.Response.Left, session.toNetwork(), id);
             session.removePlayer(player);
+        }
+
+    },
+
+    sessionPause: function(player, session, id) {
+
+        if (!session.isRunning()) {
+            player.sendError(Net.Session.Error.NotRunning, id);
+
+        } else if (session.isPaused()) {
+            player.sendError(Net.Session.Error.Paused, id);
+
+        } else if (player.hasPaused()) {
+            player.sendError(Net.Session.Error.Invalid, id);
+
+        } else {
+            session.pause(player);
+            player.send(Net.Session.Response.Paused, session.toNetwork(), id);
+        }
+
+    },
+
+    sessionResume: function(player, session, id) {
+
+        if (!session.isRunning()) {
+            player.sendError(Net.Session.Error.NotRunning, id);
+
+        } else if (!session.isPaused()) {
+            player.sendError(Net.Session.Error.NotPaused, id);
+
+        } else if (!player.hasPaused()) {
+            player.sendError(Net.Session.Error.Invalid, id);
+
+        } else {
+            session.resume(player);
+            player.send(Net.Session.Response.Resumed, session.toNetwork(), id);
         }
 
     },

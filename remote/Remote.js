@@ -69,13 +69,11 @@ var Remote = Class(function(server, socket) {
             this._socket.unbind('close', this);
             this._socket.close();
 
-            // We do NOT destroy the remote here, it might still be needed later on
-            if (this._player) {
-                this.setPlayer(null);
-
-            } else {
-                Base.destroy(this);
+            if (this.isInSession()) {
+                this._player.destroy();
             }
+
+            Base.destroy(this);
             return true;
 
         } else {
@@ -139,13 +137,16 @@ var Remote = Class(function(server, socket) {
     },
 
     onClose: function(byRemote, reason) {
+
         if (byRemote) {
             this.log('Closed by Remote:', reason);
 
         } else {
             this.log('Closed by Server:', reason);
         }
+
         this.close(reason);
+
     },
 
 
@@ -154,22 +155,20 @@ var Remote = Class(function(server, socket) {
         return this._player;
     },
 
-    setPlayer: function(player) {
+    attachPlayer: function(player) {
 
-        if (player === null) {
-            is.assert(this._player);
-            this._player = null;
+        is.assert(!this._player);
+        is.assert(is.Class(player));
 
-            // Player got destroyed and we are not connect, so clean up
-            if (!this._isConnected) {
-                Base.destroy(this);
-            }
+        this._player = player;
+        this.info('Attached Player');
 
-        } else if (Class.is(player)) {
-            is.assert(!this._player);
-            this._player = player;
-        }
+    },
 
+    detachPlayer: function(player) {
+        is.assert(this._player === player);
+        this._player = null;
+        this.info('De-tached Player');
     },
 
     getAddress: function() {

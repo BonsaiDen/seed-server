@@ -20,7 +20,8 @@ var SyncedSession = Class(function(config) {
         tick: 0,
         rate: config.rate,
         buffer: config.buffer,
-        seed: 500000 + Math.floor((Math.random() * 1000000))
+        seed: 500000 + Math.floor((Math.random() * 1000000)),
+        pausedPlayers: new TypedList(Player)
     };
 
 }, {
@@ -40,7 +41,7 @@ var SyncedSession = Class(function(config) {
 
         } else if (!synced) {
             this.log('Waiting for all players to sync...');
-            setTimeout(SyncedSession.start.bind(this), 10);
+            is.async(SyncedSession.start, this, 100);
             return true;
 
         } else if (!this._synced.running) {
@@ -67,14 +68,81 @@ var SyncedSession = Class(function(config) {
 
     },
 
+    pause: function(player) {
+
+        is.assert(Class.is(player, Player));
+        if (!this.isPaused()) {
+
+            is.assert(this._synced.pausedPlayers.length === 0);
+            this._players.each(function(p) {
+                this._synced.pausedPlayers.add(p);
+
+            }, this);
+
+            this.broadcast(Net.Game.Player.Paused, player.toNetwork());
+            this.broadcast(Net.Game.Pause, this.toNetwork());
+
+        }
+
+    },
+
+    resume: function(player) {
+
+        is.assert(Class.is(player, Player));
+        if (this.isPaused()) {
+
+            if (this._synced.pausedPlayers.remove(player)) {
+
+                this.broadcast(Net.Game.Player.Resumed, player.toNetwork());
+                if (this._synced.pausedPlayers.length === 0) {
+                    this.broadcast(Net.Game.Resume, this.toNetwork());
+                }
+
+            }
+
+        }
+
+    },
+
 
     // Player -----------------------------------------------------------------
+    onPlayerMessage: function(player, type, data) {
+
+        // TODO ignore when session is paused
+        if (this.isPaused()) {
+            this.warning('Session is paused, ignoring message from', player);
+
+        } else if (type === Net.Game.Tick.Confirm) {
+
+            if (is.Integer(data) && data > player.getTick()) {
+                this.onPlayerTick(player, data);
+
+            } else {
+                this.warning('Invalid Tick Message from', player);
+            }
+
+        } else if (type === Net.Game.Action.Client) {
+
+            // TODO check for array / object?
+            if (is.NotNull(data)) {
+                this.onPlayerAction(player, data);
+
+            } else {
+                this.warning('Invalid Action Message from', player);
+            }
+
+        } else {
+            return false;
+        }
+
+    },
+
     onPlayerTick: function(player, tick) {
 
         is.assert(Class.is(player, Player));
         is.assert(is.Integer(tick));
 
-        // TODO check if tick is higher than player tick? or is this already done?
+        player.setTick(tick);
 
         this.info('Tick %s', tick, player);
         var ticks = this._players.map(function(player) {
@@ -109,10 +177,8 @@ var SyncedSession = Class(function(config) {
 
 
     // Getters / Setters ------------------------------------------------------
-    isReady: function() {
-        return this._players.every(function(p) {
-            return p.isReady();
-        });
+    isPaused: function() {
+        return this._synced.pausedPlayers.length > 0;
     },
 
     getTickLimit: function() {
@@ -125,7 +191,7 @@ var SyncedSession = Class(function(config) {
 
     getSessionInfo: function(player) {
         return {
-            pid: player.getSessionId(), // TODO no longer required, remove
+            pid: player.getSessionId(),
             buffer: this._synced.buffer,
             rate: this._synced.rate,
             seed: this._synced.seed,

@@ -21,8 +21,8 @@ var Server = Class(function(config) {
     this._port = null;
     this._host = null;
     this._interface = null;
-    this._remotes = new TypedList(Remote);
-    this._authManager = null;
+    this._remotes = null;
+    this._auth = null;
 
     Base(this);
     SessionServer(this, config.session);
@@ -43,13 +43,16 @@ var Server = Class(function(config) {
             this._port = port;
             this._host = host;
             this._isRunning = true;
-
-            this._interface = new lithium.Server(null, JSON.stringify, JSON.parse);
-            this._interface.on('connection', this.addRemote.bind(this));
-            this._interface.listen(port, host);
+            this._remotes = new TypedList(Remote);
+            SessionServer.init(this);
 
             // Authentication
-            this._authManager = new this._config.auth.Manager(this, this._config.auth.config);
+            this._auth = new this._config.auth.Manager(this, this._config.auth.config);
+
+            // Network
+            this._interface = new lithium.Server(null, JSON.stringify, JSON.parse);
+            this._interface.on('connection', this.onConnection.bind(this));
+            this._interface.listen(port, host);
 
             this.log('Started');
             return true;
@@ -70,15 +73,16 @@ var Server = Class(function(config) {
             SessionServer.shutdown(this);
 
             // Authentication
-            this._authManager.destroy();
-            this._authManager = null;
+            this._auth.destroy();
+            this._auth = null;
 
             // Internals
             this._remotes.each(function(remote) {
                 remote.shutdown();
             });
 
-            is.assert(this._remotes.length === 0);
+            this._remotes.destroy();
+            this._remotes.list = null;
 
             this._port = null;
             this._host = null;
@@ -100,16 +104,16 @@ var Server = Class(function(config) {
 
 
     // Remotes ----------------------------------------------------------------
-    addRemote: function(socket) {
-        // TODO make private again?
-        this.info('Adding Remote for', socket);
-        this._remotes.add(new Remote(this, socket));
-    },
-
     removeRemote: function(remote) {
         this.info('Removing Remote', remote);
         is.assert(Class.is(remote, Remote));
         is.assert(this._remotes.remove(remote));
+    },
+
+    onConnection: function(socket) {
+        // TODO make private again?
+        this.info('Adding Remote for', socket);
+        this._remotes.add(new Remote(this, socket));
     },
 
 
@@ -133,7 +137,7 @@ var Server = Class(function(config) {
     },
 
     getAuhenticator: function() {
-        return this._authManager;
+        return this._auth;
     },
 
     isRunning: function() {
