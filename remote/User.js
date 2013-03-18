@@ -46,7 +46,7 @@ var User = Class(function() {
             req = auth.isValidRequest(data);
 
         if (!is.Object(req)) {
-            this.error('Login Error:', req);
+            this.error('Login Error:', Net.nameFromType(req));
             this.sendError(req, id);
             this.close('Login Error');
 

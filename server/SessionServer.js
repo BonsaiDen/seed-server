@@ -72,12 +72,14 @@ var SessionServer = Class(function(config) {
     // Actions ----------------------------------------------------------------
     onRemoteAction: function(remote, type, data, id) {
 
+        this.ok('REMOTE ACTION', Net.nameFromType(type), data, id);
+
         var player, session, tokenSession;
+        tokenSession = this.getSessionFromToken(data);
         if (remote.isInSession()) {
 
             player = remote.getPlayer();
             session = player.getSession();
-            tokenSession = this.getSessionFromToken(data);
 
             // Actions on current session
             if (session) {
@@ -94,6 +96,11 @@ var SessionServer = Class(function(config) {
                 } else if (type === Net.Session.Action.Start) {
                     this.sessionStart(player, session, id);
 
+                // TODO handle countdown cancel
+                // TODO add config for countdown duration
+                //} else if (type === Net.Session.Action.Cancel) {
+                    //this.sessionCancel(player, session, id);
+
                 } else if (type === Net.Session.Action.Leave) {
                     this.sessionLeave(player, session, id);
 
@@ -107,14 +114,16 @@ var SessionServer = Class(function(config) {
                     this.sessionClose(player, session, id);
                 }
 
-            // Actions on other sessions
-            } else if (tokenSession) {
-                if (type === Net.Session.Action.Join) {
-                    this.sessionStart(remote, tokenSession, id);
-                }
-
             } else {
                 remote.sendError(Net.Session.Error.NotFound, id);
+            }
+
+        // Actions on other sessions
+        } else if (tokenSession) {
+            this.log('Found session from token', tokenSession);
+            if (type === Net.Session.Action.Join) {
+                // TODO handle maximum amount of players per session
+                this.sessionJoin(remote, tokenSession, id);
             }
 
         // New Sessions

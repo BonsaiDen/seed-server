@@ -59,6 +59,11 @@ var Player = Class(function(session, remote, id) {
         }
     },
 
+    removeFromSession: function() {
+        is.assert(this._session);
+        this._session.removePlayer(this);
+    },
+
     destroy: function() {
 
         is.assert(!this._session.containsPlayer(this));

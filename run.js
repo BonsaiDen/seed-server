@@ -1,5 +1,6 @@
 var Server = require('./server/Server').Server,
     PersonaAuth = require('./auth/Persona').Auth,
+    BasicAuth = require('./auth/Auth').Auth,
     is = require('./lib/is').is,
     util = require('util');
 
@@ -13,7 +14,7 @@ var srv = new Server({
     },
 
     auth: {
-        Manager: PersonaAuth,
+        Manager: BasicAuth,
         config: {
             audience: 'localhost'
         }

@@ -144,14 +144,12 @@ var SyncedSession = Class(function(config) {
 
         player.setTick(tick);
 
-        this.info('Tick %s', tick, player);
         var ticks = this._players.map(function(player) {
             return player.getTick();
         });
 
         var maxTick = Math.min.apply(Math, ticks);
         if (maxTick > this._synced.tick) {
-            this.info('Advancing tick');
             this._synced.tick = maxTick;
             this.broadcast(Net.Game.Tick.Limit, this.getTickLimit());
         }
@@ -162,8 +160,6 @@ var SyncedSession = Class(function(config) {
 
         is.assert(is.Class(from, Player));
         is.assert(is.NotNull(action));
-
-        this.info('Action from', from, action);
 
         this._players.each(function(to) {
             to.send(Net.Game.Action.Server,
@@ -195,9 +191,6 @@ var SyncedSession = Class(function(config) {
             buffer: this._synced.buffer,
             rate: this._synced.rate,
             seed: this._synced.seed,
-            players: this._players.map(function(p) {
-                return p.toNetwork(p === player);
-            }),
             tick: this._synced.limit
         };
     },

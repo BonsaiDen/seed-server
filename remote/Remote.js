@@ -33,7 +33,12 @@ var Remote = Class(function(server, socket) {
 
         is.assert(is.Integer(type) && Net.isValidType(type));
 
-        this.info('Send:', Net.nameFromType(type), data);
+        if (type !== Net.Client.Ping
+            && type !== Net.Client.Sync
+            && type !== Net.Game.Tick.Confirm
+            && type !== Net.Game.Tick.Limit) {
+            this.info('Send:', Net.nameFromType(type), data);
+        }
 
         if (is.Integer(id)) {
             this._socket.send([type, data, id]);
@@ -70,7 +75,8 @@ var Remote = Class(function(server, socket) {
             this._socket.close();
 
             if (this.isInSession()) {
-                this._player.destroy();
+                // TODO make this nicer?
+                this._player.removeFromSession();
             }
 
             Base.destroy(this);
