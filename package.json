@@ -1,0 +1,14 @@
+{
+    "name": "seed-server",
+    "subdomain": "bonsaiden-seed-server",
+    "scripts": {
+        "start": "run.js 80"
+    },
+    "version": "0.1.0",
+    "engines": {
+        "node": "0.8.x"
+    },
+    "dependencies": {
+        
+    }
+}

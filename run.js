@@ -4,8 +4,6 @@ var Server = require('./server/Server').Server,
     is = require('./lib/is').is,
     util = require('util');
 
-require('longjohn');
-
 var srv = new Server({
 
     session: {
@@ -22,7 +20,7 @@ var srv = new Server({
 
 });
 
-srv.listen(4444, 'localhost', true);
+srv.listen(+process.argv[2] || 4444, 'localhost', true);
 
 process.on('SIGINT', function() {
     is.error('============= RECEIVED SIGINT =============');
