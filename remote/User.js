@@ -56,8 +56,8 @@ var User = Class(function() {
             this._user.game = req.game;
             this._user.client = req.client;
 
-            auth.loginFromRequest(req, function(login, inUse) {
-                this._handleLogin(login, id, inUse);
+            auth.loginFromRequest(req, function(login, accountInUse) {
+                this._handleLogin(login, id, accountInUse);
 
             }, this);
 
@@ -75,6 +75,10 @@ var User = Class(function() {
         return this._user.identifier;
     },
 
+    isLoggedIn: function() {
+        return this._user.isLoggedIn;
+    },
+
 
     // Helpers ----------------------------------------------------------------
     toString: function() {
@@ -83,9 +87,9 @@ var User = Class(function() {
 
 
     // Internals --------------------------------------------------------------
-    _handleLogin: function(login, id, inUse) {
+    _handleLogin: function(login, id, accountInUse) {
 
-        if (inUse) {
+        if (accountInUse) {
             this.sendError(Net.Login.Error.AccountInUse, id);
             this.close('Account in use');
 

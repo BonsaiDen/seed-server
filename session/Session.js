@@ -46,6 +46,8 @@ var Session = Class(function(server, config, remote) {
 
     broadcast: function(type, data) {
         this._players.each(function(player) {
+
+            // Custom data
             if (is.Function(data)) {
                 player.send(type, data.call(this, player));
 
@@ -101,7 +103,7 @@ var Session = Class(function(server, config, remote) {
         }
 
         // TODO Rename again???
-        this._server.sendSessionList();
+        this._server.updateSessions();
 
         this.log('Player joined', player);
 
@@ -131,7 +133,7 @@ var Session = Class(function(server, config, remote) {
         }
 
         this.broadcast(Net.Session.Info.Update, this.toNetwork());
-        this._server.sendSessionList();
+        this._server.updateSessions();
 
         this.info('Player left', player);
 
@@ -164,12 +166,7 @@ var Session = Class(function(server, config, remote) {
 
     },
 
-
-    // Getters / Setters ------------------------------------------------------
-    getToken: function() {
-        return this._token;
-    },
-
+    // Player Interaction -----------------------------------------------------
     setOwner: function(owner) {
         is.assert(!this._owner);
         is.assert(Class.is(owner, Player));
@@ -210,8 +207,18 @@ var Session = Class(function(server, config, remote) {
         return this._players.contains(player);
     },
 
+
+    // Getters / Setters ------------------------------------------------------
+    getToken: function() {
+        return this._token;
+    },
+
     isRunning: function() {
         return this._isStarted;
+    },
+
+    isFull: function() {
+        return false; // TODO implement
     },
 
     isReady: function() {

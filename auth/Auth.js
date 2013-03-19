@@ -52,18 +52,18 @@ var Auth = Class(function(server) {
 
             var identifier = username.toLowerCase(),
                 login = null,
-                inUse = false;
+                accountInUse = false;
 
             if (this._server.getUserByIdentifier(identifier)) {
                 this.error('Account "%s" already in use.', username);
-                inUse = true;
+                accountInUse = true;
 
             } else {
                 this.ok('Authenticated as "%s"', username);
                 login = this.issueToken(username, identifier, Date.now() + Auth.EXPIRES);
             }
 
-            callback.call(context, login, inUse);
+            callback.call(context, login, accountInUse);
 
         } else {
             this.error('Invalid Username "%s"', username);
@@ -80,7 +80,7 @@ var Auth = Class(function(server) {
         is.assert(is.Object(context));
 
         var login = null,
-            inUse = false,
+            accountInUse = false,
             username = req.username,
             token = req.token;
 
@@ -101,7 +101,7 @@ var Auth = Class(function(server) {
 
             } else if (this._server.getUserByIdentifier(t.identifier)) {
                 this.error('Account "%s" already in use.', t.username);
-                inUse = true;
+                accountInUse = true;
 
             } else {
                 this.ok('Re-issueing token for "%s" (%s)', t.username, t.identifier);
@@ -111,7 +111,7 @@ var Auth = Class(function(server) {
 
         }
 
-        callback.call(context, login, inUse);
+        callback.call(context, login, accountInUse);
 
     },
 

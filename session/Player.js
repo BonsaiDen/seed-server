@@ -37,7 +37,7 @@ var Player = Class(function(session, remote, id) {
             this._remote.send(type, data, id);
 
         } else {
-            this.warning('Player not longer connected, ingoring send().');
+            this.warning('Player no longer connected, ingoring send().');
         }
     },
 
@@ -46,31 +46,39 @@ var Player = Class(function(session, remote, id) {
             this._remote.sendError(type, id);
 
         } else {
-            this.warning('Player not longer connected, ingoring sendError().');
+            this.warning('Player no longer connected, ingoring sendError().');
         }
     },
 
     onMessage: function(type, data) {
         if (!this._session) {
-            this.warning('Player not longer in session, ignoring message');
+            this.warning('Player no longer in session, ignoring onMessage().');
 
         } else {
             return this._session.onPlayerMessage(this, type, data);
         }
     },
 
+    destroy: function() {
+        is.assert(!this._session.containsPlayer(this));
+        this._session = null;
+        this._remote.detachPlayer(this);
+        Base.destroy(this);
+    },
+
+
+    // Session Interaction ----------------------------------------------------
     removeFromSession: function() {
         is.assert(this._session);
         this._session.removePlayer(this);
     },
 
-    destroy: function() {
+    getSession: function() {
+        return this._session;
+    },
 
-        is.assert(!this._session.containsPlayer(this));
-        this._session = null;
-        this._remote.detachPlayer(this);
-        Base.destroy(this);
-
+    getSessionId: function() {
+        return this._sessionId;
     },
 
 
@@ -87,7 +95,6 @@ var Player = Class(function(session, remote, id) {
         return this._name;
     },
 
-    // Session
     isReady: function() {
         return this._isReady;
     },
@@ -98,6 +105,8 @@ var Player = Class(function(session, remote, id) {
         this._isReady = ready;
     },
 
+
+    // Network Specific Getters / Setters -------------------------------------
     setTick: function(tick) {
         is.assert(is.Integer(tick));
         this._tick = tick;
@@ -107,21 +116,6 @@ var Player = Class(function(session, remote, id) {
         return this._tick;
     },
 
-    setSession: function(session) {
-        is.assert(Class.is(session));
-        this._session = session;
-    },
-
-    getSession: function() {
-        return this._session;
-    },
-
-    getSessionId: function() {
-        return this._sessionId;
-    },
-
-
-    // Network
     isSynced: function() {
         return this._remote.isSynced();
     },

@@ -162,13 +162,11 @@ var Remote = Class(function(server, socket) {
     },
 
     attachPlayer: function(player) {
-
         is.assert(!this._player);
         is.assert(is.Class(player));
 
         this._player = player;
         this.info('Attached Player');
-
     },
 
     detachPlayer: function(player) {

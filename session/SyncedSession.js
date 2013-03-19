@@ -45,26 +45,21 @@ var SyncedSession = Class(function(config) {
             return true;
 
         } else if (!this._synced.running) {
-            this.init();
+
+            this._synced.running = true;
+            this._synced.limit = 1;
+            this._synced.tick = 0;
+            this.broadcast(Net.Game.Start, function(player) {
+                return this.getSessionInfo(player);
+            });
+
+            this.log('Started');
             return true;
 
         } else {
             this.warning('Already Running');
             return false;
         }
-
-    },
-
-    init: function() {
-
-        this._synced.running = true;
-        this._synced.limit = 1;
-        this._synced.tick = 0;
-        this.broadcast(Net.Game.Start, function(player) {
-            return this.getSessionInfo(player);
-        });
-
-        this.log('Initialized');
 
     },
 
@@ -105,12 +100,12 @@ var SyncedSession = Class(function(config) {
     },
 
 
-    // Player -----------------------------------------------------------------
+    // Player Interaction -----------------------------------------------------
     onPlayerMessage: function(player, type, data) {
 
-        // TODO ignore when session is paused
         if (this.isPaused()) {
-            this.warning('Session is paused, ignoring message from', player);
+            this.warning('Session is paused, ignoring message "%s from',
+                            Net.nameFromType(type), player);
 
         } else if (type === Net.Game.Tick.Confirm) {
 
